@@ -1,6 +1,31 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def extract_data_from_dfgen(df_gen,IDs,para,t=None):
+
+    ## set filter
+    filter_gen_IDs = [df_gen["id"].isin(IDs),df_gen["t"]>-4.84]
+    if t:
+        filter_gen_IDs.append(df_gen["t"]==t)
+    filter_gen_IDs = np.all(filter_gen_IDs,axis=0)
+
+    ## extract data from df based on filter
+    df_gen_IDs = df_gen[filter_gen_IDs].reset_index(drop=True)
+
+    ## select specific parameter
+    if para in ['v_f','v_l','d','weight']:
+        para_gen_IDs = df_gen_IDs[para].to_numpy()
+        if not t: ## read entire timeserise from begin to crash
+            if para == "weight":
+                para_gen_IDs = para_gen_IDs[::97]
+            elif para in ['v_f','v_l','d']:
+                para_gen_IDs = para_gen_IDs.reshape(-1,97)
+    else:
+        raise Exception("wrong para. (para: 'v_f','v_l','d','weight')")
+        
+    return para_gen_IDs
+
+
 def idxSample(labels,cls,weights,traj_number = None):
     '''
     Sample indexes of a given clster based on weights. 
