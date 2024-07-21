@@ -37,8 +37,11 @@ def idxSample(labels,cls,weights,traj_number = None):
         return indexes_cls
     else:
         if traj_number < indexes_cls.shape[0]:
-            indexes_sampled = np.random.choice(indexes_cls, size=traj_number, replace=False, p=weights_cls/np.sum(weights_cls))
-            return indexes_sampled
+            if weights_cls.shape[0]!=0:
+                indexes_sampled = np.random.choice(indexes_cls, size=traj_number, replace=False, p=weights_cls/np.sum(weights_cls))
+                return indexes_sampled
+            else:
+                return indexes_cls
         else:
             return indexes_cls
 
@@ -53,10 +56,10 @@ def clsInspection(
         X,
         labels,
         weights,
-        dimen = 5,
+        dimen = 3,
         cluster_selection = None,
         traj_number = None,
-        line_transparency = 0.3,
+        line_transparency = 1,
         line_width = 0.2,
         line_width_ratio = 20,
         fig_name=None):
@@ -132,7 +135,105 @@ def clsInspection(
 
 
 
+def trajInspection(
+        X,
+        X_gen,
+        labels,
+        labels_gen,
+        weights,
+        weights_gen,
+        dimen = 3,
+        cluster_selection = None,
+        traj_number = None,
+        line_transparency = 1,
+        line_width = 0.2,
+        line_width_ratio = 20,
+        fig_name=None):
+    '''
+    cluster_selection: a list that contains Cluster for inspection (e.g. [1,2,4,5])
+    traj_number: a int value, represents the maximum trajectory number for plotting
+    '''
+    ## set timestamp for plotting
+    l = int(X.shape[1]/dimen)
+    t = np.arange(0, -0.05 * l, -0.05)
+    t = np.flip(t)
 
+    if cluster_selection == None:
+        cluster_selection = list(np.unique(labels))
+    else: # filter no exist cluster
+        cluster_selection = [item for item in cluster_selection if item in np.unique(labels)]
+        if len(cluster_selection) == 0:
+            cluster_selection = list(np.unique(labels))
+    n_clusters = len(cluster_selection)
+    plt.figure(figsize=(n_clusters*3, 6))
+
+    for i, cls in enumerate(cluster_selection):
+
+        idx = idxSample(labels,cls,weights,traj_number)
+        idx_gen = idxSample(labels_gen,cls,weights_gen,traj_number)
+        mean_xx, max_xx, min_xx = calculateTrajMeanMaxMin(X[labels == cls,:,0],weights[labels == cls],length=l)
+        mean_xx_gen, max_xx_gen, min_xx_gen = calculateTrajMeanMaxMin(X_gen[labels_gen == cls,:,0],weights_gen[labels_gen == cls],length=l)
+        max_xx = tuple(map(max, zip(max_xx, max_xx_gen))) ## ylim max
+        min_xx = tuple(map(min, zip(min_xx, min_xx_gen))) ## ylim min
+
+        plt.subplot(3, n_clusters, i + 1)
+        for xx in X[idx,:l,0]:
+            plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
+        for xx_gen in X_gen[idx_gen,:l,0]:
+            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
+        plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
+        plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
+        plt.plot(t, mean_xx[:l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
+        plt.plot(t, mean_xx_gen[:l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
+        plt.title(f"Cluster: {cls}")
+        plt.xticks(np.arange(-5, 0.1, 1))
+        plt.xlim([-5.05,0.15])
+        plt.ylim([min_xx[0]-.3,max_xx[0]+.3])
+        if i == 0:
+            plt.ylabel("Lead Vehicle Velocity (m/s)")
+        if cls == cluster_selection[-1]:
+            plt.legend()
+
+        plt.subplot(3, n_clusters, n_clusters + i + 1)
+        for xx in X[idx,l:2*l,0]:
+            plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
+        for xx_gen in X_gen[idx_gen,l:2*l,0]:
+            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
+        plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
+        plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
+        plt.plot(t, mean_xx[l:2*l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
+        plt.plot(t, mean_xx_gen[l:2*l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
+        plt.xticks(np.arange(-5, 0.1, 1))
+        plt.xlim([-5.05,0.15])
+        plt.ylim([min_xx[1]-.3,max_xx[1]+.3])
+        if i == 0:
+            plt.ylabel("Following Vehicle Velocity (m/s)")
+        # plt.legend()
+
+        plt.subplot(3, n_clusters, 2*n_clusters + i + 1)
+        for xx in X[idx,2*l:3*l,0]:
+            plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
+        for xx_gen in X_gen[idx,2*l:3*l,0]:
+            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
+        plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
+        plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
+        plt.plot(t, mean_xx[2*l:3*l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
+        plt.plot(t, mean_xx_gen[2*l:3*l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
+        plt.xlabel("time before crash (s)")
+        plt.xticks(np.arange(-5, 0.1, 1))
+        plt.xlim([-5.05,0.15])
+        plt.ylim([min_xx[2]-.3,max_xx[2]+.3])
+        if i == 0:
+            plt.ylabel("Distance (m)")
+        # plt.legend()
+
+    
+        # plt.xticks(fontsize=18)
+        # plt.yticks(fontsize=18)
+        plt.tight_layout()
+    ## Save fig
+    if fig_name:
+        plt.savefig(fig_name, dpi=300)
 
 
 
