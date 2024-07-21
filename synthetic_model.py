@@ -63,10 +63,11 @@ def LVTrajSynthetic(model,V_l_0,A_l_0,V_f_0,A_f_0,T_traj=5,mode="rs",device=devi
     Input[:,0,3] = copy.deepcopy(V_f_0)
     Input[:,0,4] = copy.deepcopy(A_f_0)
     
-    ## generate following vehicle's output 
-    A_output = LVActionPred(model,Input[:,:1,:],mode=mode,device=device)
-    A_output[(KM_l[:,0,1]==0)&(A_output>0)] = 0
-    KM_l[:,0,2] = copy.deepcopy(A_output)
+    # ## generate following vehicle's output 
+    # A_output = LVActionPred(model,Input[:,:1,:],mode=mode,device=device)
+    # A_output[(KM_l[:,0,1]==0)&(A_output>0)] = 0
+    # KM_l[:,0,2] = copy.deepcopy(A_output)
+    KM_l[:,0,2] = copy.deepcopy(A_l_0)
     
     for i_t in range(1,l_traj):
         
@@ -114,11 +115,11 @@ def FVTrajSynthetic(model,V_f_0,A_f_0,D_0,V_l_full,mode="rs",device=device):
     Input_Vl = np.zeros((n_traj,1,97))
     Input_Vl[:,0,:] = V_l_full[:,:97]
     
-    ## generate following vehicle's output 
-    # A_output = ActionGen_FV(model,Input[:,:1,:],mode=mode,device=device)
-    A_output = FVActionPred(model,Input[:,:1,:],Input_Vl,mode=mode,device=device)
-    A_output[(KM_f[:,0,1]==0)&(A_output>0)] = 0
-    KM_f[:,0,2] = copy.deepcopy(A_output)
+    # ## generate following vehicle's output 
+    # A_output = FVActionPred(model,Input[:,:1,:],Input_Vl,mode=mode,device=device)
+    # A_output[(KM_f[:,0,1]==0)&(A_output>0)] = 0
+    # KM_f[:,0,2] = copy.deepcopy(A_output)
+    KM_f[:,0,2] = copy.deepcopy(A_f_0)
     
     for i_t in range(1,l_traj):
         
