@@ -46,10 +46,16 @@ def idxSample(labels,cls,weights,traj_number = None):
             return indexes_cls
 
 def calculateTrajMeanMaxMin(XX,weights,length):
-    mean_xx = np.average(XX,axis = 0, weights=weights)
-    max_xx1, min_xx1 = np.max(XX[:,:length]), np.min(XX[:,:length])
-    max_xx2, min_xx2 = np.max(XX[:,length:length*2]), np.min(XX[:,length:length*2])
-    max_xx3, min_xx3 = np.max(XX[:,length*2:length*3]), np.min(XX[:,length*2:length*3])
+    if weights.shape[0]!=0:
+        mean_xx = np.average(XX,axis = 0, weights=weights)
+        max_xx1, min_xx1 = np.max(XX[:,:length]), np.min(XX[:,:length])
+        max_xx2, min_xx2 = np.max(XX[:,length:length*2]), np.min(XX[:,length:length*2])
+        max_xx3, min_xx3 = np.max(XX[:,length*2:length*3]), np.min(XX[:,length*2:length*3])
+    else:
+        mean_xx = np.zeros(length*3)*np.nan
+        max_xx1, min_xx1 = np.NaN, np.NaN
+        max_xx2, min_xx2 = np.NaN, np.NaN
+        max_xx3, min_xx3 = np.NaN, np.NaN
     return mean_xx, (max_xx1,max_xx2,max_xx3), (min_xx1,min_xx2,min_xx3)
 
 def clsInspection(
@@ -59,6 +65,7 @@ def clsInspection(
         dimen = 3,
         cluster_selection = None,
         traj_number = None,
+        normalized_results = False,
         line_transparency = 1,
         line_width = 0.2,
         line_width_ratio = 20,
@@ -72,6 +79,8 @@ def clsInspection(
     t = np.arange(0, -0.05 * l, -0.05)
     t = np.flip(t)
 
+    D_norma = 1 if normalized_results else 0
+        
     if cluster_selection == None:
         cluster_selection = list(np.unique(labels))
     else: # filter no exist cluster
@@ -84,10 +93,10 @@ def clsInspection(
     for i, cls in enumerate(cluster_selection):
 
         idx = idxSample(labels,cls,weights,traj_number)
-        mean_xx, max_xx, min_xx = calculateTrajMeanMaxMin(X[labels == cls,:,0],weights[labels == cls],length=l)
+        mean_xx, max_xx, min_xx = calculateTrajMeanMaxMin(X[labels == cls,:,D_norma],weights[labels == cls],length=l)
 
         plt.subplot(3, n_clusters, i + 1)
-        for xx in X[idx,:l,0]:
+        for xx in X[idx,:l,D_norma]:
             plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
         plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
         plt.plot(t, mean_xx[:l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
@@ -101,7 +110,7 @@ def clsInspection(
             plt.legend()
 
         plt.subplot(3, n_clusters, n_clusters + i + 1)
-        for xx in X[idx,l:2*l,0]:
+        for xx in X[idx,l:2*l,D_norma]:
             plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
         plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
         plt.plot(t, mean_xx[l:2*l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
@@ -113,7 +122,7 @@ def clsInspection(
         # plt.legend()
 
         plt.subplot(3, n_clusters, 2*n_clusters + i + 1)
-        for xx in X[idx,2*l:3*l,0]:
+        for xx in X[idx,2*l:3*l,D_norma]:
             plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
         plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
         plt.plot(t, mean_xx[2*l:3*l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
@@ -179,12 +188,13 @@ def trajInspection(
         plt.subplot(3, n_clusters, i + 1)
         for xx in X[idx,:l,0]:
             plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
-        for xx_gen in X_gen[idx_gen,:l,0]:
-            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
         plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
-        plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
         plt.plot(t, mean_xx[:l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
-        plt.plot(t, mean_xx_gen[:l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
+        if idx_gen.shape[0]>0:
+            for xx_gen in X_gen[idx_gen,:l,0]:
+                plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
+            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
+            plt.plot(t, mean_xx_gen[:l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
         plt.title(f"Cluster: {cls}")
         plt.xticks(np.arange(-5, 0.1, 1))
         plt.xlim([-5.05,0.15])
@@ -197,12 +207,13 @@ def trajInspection(
         plt.subplot(3, n_clusters, n_clusters + i + 1)
         for xx in X[idx,l:2*l,0]:
             plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
-        for xx_gen in X_gen[idx_gen,l:2*l,0]:
-            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
         plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
-        plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
         plt.plot(t, mean_xx[l:2*l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
-        plt.plot(t, mean_xx_gen[l:2*l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
+        if idx_gen.shape[0]>0:
+            for xx_gen in X_gen[idx_gen,l:2*l,0]:
+                plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
+            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
+            plt.plot(t, mean_xx_gen[l:2*l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
         plt.xticks(np.arange(-5, 0.1, 1))
         plt.xlim([-5.05,0.15])
         plt.ylim([min_xx[1]-.3,max_xx[1]+.3])
@@ -213,12 +224,13 @@ def trajInspection(
         plt.subplot(3, n_clusters, 2*n_clusters + i + 1)
         for xx in X[idx,2*l:3*l,0]:
             plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width)
-        for xx_gen in X_gen[idx,2*l:3*l,0]:
-            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
         plt.plot(t,xx, "b-", alpha=line_transparency, linewidth = line_width,label="Raw")
-        plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
         plt.plot(t, mean_xx[2*l:3*l], "b-", alpha=1, linewidth = line_width*line_width_ratio,label="Raw, mean")
-        plt.plot(t, mean_xx_gen[2*l:3*l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
+        if idx_gen.shape[0]>0:
+            for xx_gen in X_gen[idx_gen,2*l:3*l,0]:
+                plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width)
+            plt.plot(t,xx_gen, "r-", alpha=line_transparency, linewidth = line_width,label="Synthetic")
+            plt.plot(t, mean_xx_gen[2*l:3*l], "r-", alpha=1, linewidth = line_width*line_width_ratio,label="Synthetic, mean")
         plt.xlabel("time before crash (s)")
         plt.xticks(np.arange(-5, 0.1, 1))
         plt.xlim([-5.05,0.15])
