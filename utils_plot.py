@@ -20,8 +20,15 @@ def extract_data_from_dfgen(df_gen,IDs,para,t=None):
                 para_gen_IDs = para_gen_IDs[::97]
             elif para in ['v_f','v_l','d']:
                 para_gen_IDs = para_gen_IDs.reshape(-1,97)
+    elif para in ['label','qualify']:
+        try:
+            para_gen_IDs = df_gen_IDs[para].to_numpy()
+            if not t: ## read entire timeserise from begin to crash
+                para_gen_IDs = para_gen_IDs[::97]
+        except:
+            raise Exception(f"para{para} does not in df_gen")
     else:
-        raise Exception("wrong para. (para: 'v_f','v_l','d','weight')")
+        raise Exception("wrong para. (para: 'v_f','v_l','d','weight','label','qualify')")
         
     return para_gen_IDs
 
@@ -249,7 +256,50 @@ def trajInspection(
 
 
 
+from sklearn.manifold import TSNE
+import seaborn as sns
+def tsne_anslysis(dataset1,
+                  dataset2,
+                  index_cutoff_gen,
+                  fig_name = None
+                 ):
+    
+    '''
+    dataset1: raw data
+    dataset2: gen data
+    '''
 
+    combined_data = np.concatenate((dataset2, dataset1))
+
+    tsne = TSNE(n_components=2, init='pca',learning_rate='auto')
+    # tsne_result = tsne.fit_transform(combined_data_standardized)
+    result = tsne.fit_transform(combined_data)
+
+    n = 3
+    # HUE = ["Synthetic"]*dataset2.shape[0]+["Raw"]*dataset1.shape[0]
+    HUE = np.array(["Synthetic (Remaining)"]*dataset2.shape[0]+["Raw"]*dataset1.shape[0])
+    HUE_newgen = HUE[:dataset2.shape[0]]
+    HUE_newgen[~index_cutoff_gen] = "Synthetic (Removed)"
+    HUE[:dataset2.shape[0]] = HUE_newgen
+
+    df = pd.DataFrame()
+    df['y'] = HUE
+    df['comp-1'] = result[:, 0]
+    df['comp-2'] = result[:, 1]
+    df['weights'] = 1
+    plt.clf()
+    h = sns.scatterplot(x='comp-1',
+                        y='comp-2',
+                        hue=df.y.tolist(),
+                        palette=sns.color_palette('Set1', n)[::-1],
+                        data=df)
+
+    h.axes.axis('off')
+    plt.tight_layout()
+    if fig_name:
+        plt.savefig(fig_name, dpi=300)
+    plt.show()
+    return df
 
 
 
