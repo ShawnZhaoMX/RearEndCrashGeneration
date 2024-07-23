@@ -258,6 +258,7 @@ def trajInspection(
 
 from sklearn.manifold import TSNE
 import seaborn as sns
+import pandas as pd
 def tsne_anslysis(dataset1,
                   dataset2,
                   index_cutoff_gen,
