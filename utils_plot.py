@@ -1,12 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def extract_data_from_dfgen(df_gen,IDs,para,t=None):
+def extract_data_from_dfgen(df_gen,IDs,para,t=None,nofilter=True):
 
     ## set filter
     filter_gen_IDs = [df_gen["id"].isin(IDs),df_gen["t"]>-4.84]
     if t:
         filter_gen_IDs.append(df_gen["t"]==t)
+    if ~nofilter:
+        filter_gen_IDs.append(df_gen["qualify"]==True)
     filter_gen_IDs = np.all(filter_gen_IDs,axis=0)
 
     ## extract data from df based on filter
