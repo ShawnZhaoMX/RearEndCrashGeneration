@@ -1,14 +1,26 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def extract_data_from_dfgen(df_gen,IDs,para,t=None,nofilter=True):
+def extract_data_from_dfgen(df_gen,
+                            para,
+                            IDs=None,
+                            split_type = None,
+                            Idxes=None,
+                            t=None,
+                            nofilter=True):
 
     ## set filter
-    filter_gen_IDs = [df_gen["id"].isin(IDs),df_gen["t"]>-4.84]
+    filter_gen_IDs = [df_gen["t"]>-4.84]
     if t:
         filter_gen_IDs.append(df_gen["t"]==t)
-    if ~nofilter:
+    if nofilter == False:
         filter_gen_IDs.append(df_gen["qualify"]==True)
+    if IDs is not None:
+        filter_gen_IDs.append(df_gen["id"].isin(IDs))
+    if split_type is not None:
+        filter_gen_IDs.append(df_gen["split_type"]==split_type)
+    if Idxes is not None:
+        filter_gen_IDs.append(df_gen["idx"].isin(Idxes))
     filter_gen_IDs = np.all(filter_gen_IDs,axis=0)
 
     ## extract data from df based on filter
@@ -22,15 +34,15 @@ def extract_data_from_dfgen(df_gen,IDs,para,t=None,nofilter=True):
                 para_gen_IDs = para_gen_IDs[::97]
             elif para in ['v_f','v_l','d']:
                 para_gen_IDs = para_gen_IDs.reshape(-1,97)
-    elif para in ['label','qualify']:
+    elif para in ['label','qualify','reweight']:
         try:
             para_gen_IDs = df_gen_IDs[para].to_numpy()
             if not t: ## read entire timeserise from begin to crash
                 para_gen_IDs = para_gen_IDs[::97]
         except:
-            raise Exception(f"para{para} does not in df_gen")
+            raise Exception(f"para {para} does not in df_gen")
     else:
-        raise Exception("wrong para. (para: 'v_f','v_l','d','weight','label','qualify')")
+        raise Exception("wrong para. (para: 'v_f','v_l','d','weight','label','qualify','reweight')")
         
     return para_gen_IDs
 
