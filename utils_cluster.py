@@ -94,3 +94,90 @@ def normalize(X_train,dimen):
 #     X_train[:,l*2:,1] = (X_train[:,l*2:,1] - mean3)/std3
     
 #     return X_train
+
+
+# !pip install pycuda
+# !pip install pyopencl
+# !pip install GPUDTW
+
+from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
+from scipy.spatial.distance import pdist, cdist
+from scipy.spatial.distance import squareform
+
+import matplotlib.pyplot as plt
+
+def hc_dm(X, alg="euclidean"):
+    '''
+    Calculate the distance matrix for H Clustering
+    '''
+    if alg == 'euclidean':
+        dist_matrix = pdist(X)
+    elif alg == 'fastdtw':
+        from fastdtw import fastdtw
+        dist_matrix = pdist(X, lambda u, v: fastdtw(u, v)[0])
+    elif alg == 'dtw':
+        from GPUDTW import cuda_dtw
+        X = X.astype(np.float32)
+        dist_matrix = cuda_dtw(X, X)
+        dist_matrix = squareform(dist_matrix)
+    else:
+        raise ValueError("Invalid algorithm. Please choose 'euclidean' or 'fastdtw' or 'dtw'.")
+    return dist_matrix
+
+def hc_fcluster(dist_matrix, method='single', n_cls=16, figsize=(10, 8)):
+    '''
+    inputs: distance matrix
+    output: cluster label
+    '''
+    ## form linkage
+    Z = linkage(dist_matrix, method=method)
+    ## assign labels
+    y = fcluster(Z, t=n_cls, criterion='maxclust')
+    ## plot dendrogram
+    if figsize is not None:
+        plt.figure(figsize=figsize)
+        dendrogram(Z, truncate_mode='lastp', p=n_cls)
+        plt.show()
+    return y
+
+def hc_secondary(dist_matrix,y,y_target,n_target,filter_threshold=None,method='single',figsize=(4,3.2)):
+    '''
+    dist_matrix: raw dm
+    y: cluster labels
+    y_target: the cluster label that we want to do secondary clustering
+    n_target: number of clusters for secondary clustering
+    '''
+    ## extract distance matrix for
+    dm_squareform = squareform(dist_matrix)
+    dm_sec = dm_squareform[y==y_target][:,y==y_target]
+    dm_sec = squareform(dm_sec)
+
+    y_updated = np.copy(y)
+    if figsize is None:
+        y_sec = hc_fcluster(dm_sec, method=method, n_cls=n_target, figsize=None)
+    else:
+        y_sec = hc_fcluster(dm_sec, method=method, n_cls=n_target, figsize=figsize)
+    if filter_threshold is not None:
+        y_sec = filterOutlier(y_sec,threshold=filter_threshold)
+    y_updated[y_updated==y_target] += y_sec
+    return y_updated
+
+def filterOutlier(y,threshold=2):
+    '''
+    threshold: number of minimum samples in a cluster
+    '''
+    y_updated = np.copy(y)
+    labels, numbers = np.unique(y,return_counts=True)
+    for i, label in enumerate(labels):
+        if numbers[i]<threshold:
+            y_updated[y==label] = 0
+    return y_updated
+
+def mergeOutlierToOther(dist_matrix,y,y_target):
+    dm_sqr = squareform(dist_matrix)
+    dm_sqr_target = dm_sqr[y==y_target]
+    labels = np.unique(y)
+    min_dist = np.zeros((dm_sqr_target.shape[0],labels.shape[0]))
+    for i_label, label in enumerate(labels):
+        min_dist[:,i_label] = np.min(dm_sqr_target[:,y==label],axis=1)
+    y[y==y_target] = labels[labels!=y_target][np.argmin(min_dist[:,labels!=y_target],axis=1)]
