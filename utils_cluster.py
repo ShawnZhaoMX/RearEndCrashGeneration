@@ -116,9 +116,13 @@ def hc_dm(X, alg="euclidean"):
         from fastdtw import fastdtw
         dist_matrix = pdist(X, lambda u, v: fastdtw(u, v)[0])
     elif alg == 'dtw':
-        from GPUDTW import cuda_dtw
         X = X.astype(np.float32)
-        dist_matrix = cuda_dtw(X, X)
+        try:
+            from GPUDTW import cuda_dtw
+            dist_matrix = cuda_dtw(X, X)
+        except:
+            from GPUDTW import cpu_dtw, dtw_1D_jit2
+            dist_matrix = cpu_dtw(X, X, dtw_1D_jit2)
         dist_matrix = squareform(dist_matrix)
     else:
         raise ValueError("Invalid algorithm. Please choose 'euclidean' or 'fastdtw' or 'dtw'.")
