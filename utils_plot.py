@@ -276,6 +276,7 @@ import pandas as pd
 def tsne_anslysis(dataset1,
                   dataset2,
                   index_cutoff_gen,
+                  show_removed = True,
                   fig_name = None
                  ):
     
@@ -287,15 +288,33 @@ def tsne_anslysis(dataset1,
     combined_data = np.concatenate((dataset2, dataset1))
 
     tsne = TSNE(n_components=2, init='pca',learning_rate='auto')
-    # tsne_result = tsne.fit_transform(combined_data_standardized)
-    result = tsne.fit_transform(combined_data)
+    # # tsne_result = tsne.fit_transform(combined_data_standardized)
+    # result = tsne.fit_transform(combined_data)
 
-    n = 3
-    # HUE = ["Synthetic"]*dataset2.shape[0]+["Raw"]*dataset1.shape[0]
-    HUE = np.array(["Synthetic (Remaining)"]*dataset2.shape[0]+["Raw"]*dataset1.shape[0])
-    HUE_newgen = HUE[:dataset2.shape[0]]
-    HUE_newgen[~index_cutoff_gen] = "Synthetic (Removed)"
-    HUE[:dataset2.shape[0]] = HUE_newgen
+    # n = 3
+    # # HUE = ["Synthetic"]*dataset2.shape[0]+["Raw"]*dataset1.shape[0]
+    # HUE = np.array(["Synthetic (Remaining)"]*dataset2.shape[0]+["Raw"]*dataset1.shape[0])
+    # HUE_newgen = HUE[:dataset2.shape[0]]
+    # HUE_newgen[~index_cutoff_gen] = "Synthetic (Removed)"
+    # HUE[:dataset2.shape[0]] = HUE_newgen
+
+    # if show_removed == False:
+    #     HUE = np.concatenate((HUE[:dataset2.shape[0]][index_cutoff_gen], HUE[dataset2.shape[0]:]), axis=0)
+    #     result = np.concatenate((result[:dataset2.shape[0]][index_cutoff_gen], result[dataset2.shape[0]:]), axis=0)
+    #     n = 2
+
+    if show_removed:
+        n = 3
+        result = tsne.fit_transform(combined_data)
+        HUE = np.array(["Synthetic (Remaining)"]*dataset2.shape[0]+["Raw"]*dataset1.shape[0])
+        HUE_newgen = HUE[:dataset2.shape[0]]
+        HUE_newgen[~index_cutoff_gen] = "Synthetic (Removed)"
+        HUE[:dataset2.shape[0]] = HUE_newgen
+    else:
+        n = 2
+        combined_data = np.concatenate((combined_data[:dataset2.shape[0]][index_cutoff_gen], combined_data[dataset2.shape[0]:]), axis=0)
+        result = tsne.fit_transform(combined_data)
+        HUE = np.array(["Synthetic (Remaining)"]*dataset2[index_cutoff_gen].shape[0]+["Raw"]*dataset1.shape[0])
 
     df = pd.DataFrame()
     df['y'] = HUE
