@@ -87,6 +87,7 @@ def sns_comparison(data, #dataframe
                    x, # key 
                    hue,
                    type='hist',
+                   x_percentile_points=None,
                    ax=None,
                    y=None,
                    bins=None,
@@ -123,6 +124,21 @@ def sns_comparison(data, #dataframe
                          weights=weights,
                          palette=palette,
                          linewidth=1.5)
+        if x_percentile_points.any():
+            # Get the x and y values of the plotted ECDF
+            lines = h.get_lines()  # Get the ECDF lines
+            palette_colors = sns.color_palette(palette)  # Get the colors from the palette
+            for i, line in enumerate(lines[::-1]):
+                x_data = line.get_xdata()  # X-values of the ECDF
+                y_data = line.get_ydata()  # Y-values of the ECDF
+                
+                # Interpolate to find the corresponding y-values for the x_percentile_points
+                y_scatter_values = np.interp(x_percentile_points, x_data, y_data)
+                
+                # Add scatter points at the calculated x and y values
+                # Color matches the palette and black edge for boundary
+                plt.scatter(x_percentile_points, y_scatter_values, 
+                            color=palette_colors[i], edgecolor='black', zorder=5, s=50)
 
     elif type == 'hist':
         if bins:
